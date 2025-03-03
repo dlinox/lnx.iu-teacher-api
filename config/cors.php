@@ -4,8 +4,8 @@ return [
     'allowed_methods' => ['*'], // Permitir todos los métodos
     'allowed_origins' => [
         //todo los orígenes permitidos de cualquier puerto 34.55.61.47:
-        '/^http:\/\/34\.55\.61\.47(:\d+)?$/', // Permitir cualquier puerto en esta IP
-        '/^http:\/\/localhost(:\d+)?$/' // Permitir localhost en cualquier puerto
+        'http://34.55.61.47:96', // Permitir cualquier puerto en esta IP
+        'http://localhost', // Permitir cualquier puerto en localhost
     ], // Solo estos orígenes pueden acceder a la API
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'], // Permitir todos los encabezados
