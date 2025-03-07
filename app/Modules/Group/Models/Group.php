@@ -25,11 +25,12 @@ class Group extends Model
             'periods.year as period',
             'periods.month as month',
             'groups.modality as modality',
+            'curriculums.name as curriculum',
         )
-            ->join('curriculum_courses', 'groups.curriculum_course_id', '=', 'curriculum_courses.id')
-            ->join('courses', 'curriculum_courses.course_id', '=', 'courses.id')
-            ->join('modules', 'curriculum_courses.module_id', '=', 'modules.id')
-            ->join('areas', 'curriculum_courses.area_id', '=', 'areas.id')
+            ->join('courses', 'courses.id', '=', 'groups.course_id')
+            ->join('curriculums', 'courses.curriculum_id', '=', 'curriculums.id')
+            ->join('modules', 'courses.module_id', '=', 'modules.id')
+            ->join('areas', 'courses.area_id', '=', 'areas.id')
             ->join('periods', 'groups.period_id', '=', 'periods.id')
             ->where('groups.teacher_id', $teacherId)
             ->where('groups.period_id', $periodId)
@@ -59,11 +60,14 @@ class Group extends Model
             'periods.year as period',
             'periods.month as month',
             'groups.modality as modality',
+            'curriculums.id as curriculumId',
+            'curriculums.name as curriculum',
+            'courses.units',
         )
-            ->join('curriculum_courses', 'groups.curriculum_course_id', '=', 'curriculum_courses.id')
-            ->join('courses', 'curriculum_courses.course_id', '=', 'courses.id')
-            ->join('modules', 'curriculum_courses.module_id', '=', 'modules.id')
-            ->join('areas', 'curriculum_courses.area_id', '=', 'areas.id')
+            ->join('courses', 'courses.id', '=', 'groups.course_id')
+            ->join('curriculums', 'courses.curriculum_id', '=', 'curriculums.id')
+            ->join('modules', 'courses.module_id', '=', 'modules.id')
+            ->join('areas', 'courses.area_id', '=', 'areas.id')
             ->join('periods', 'groups.period_id', '=', 'periods.id')
             ->where('groups.id', $id)
             ->first();
@@ -84,9 +88,6 @@ class Group extends Model
     public static function getGroupStudents($id)
     {
         $students = DB::table('enrollment_groups')
-            ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
-            ->join('people', 'students.person_id', '=', 'people.id')
-            ->join('student_types', 'students.student_type_id', '=', 'student_types.id')
             ->select(
                 'students.id',
                 'enrollment_groups.id as enrollmentGroupId',
@@ -97,7 +98,11 @@ class Group extends Model
                 'people.email',
                 'people.phone',
                 'student_types.name as studentType',
+
             )
+            ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
+            ->join('student_types', 'students.student_type_id', '=', 'student_types.id')
+            ->join('people', 'students.person_id', '=', 'people.id')
             ->where('enrollment_groups.group_id', $id)
             ->orderBy('people.name')
             ->orderBy('people.last_name_father')
@@ -109,19 +114,50 @@ class Group extends Model
     public static function getGradeStudents($id)
     {
         $grades = DB::table('enrollment_groups')
-            ->leftJoin('enrollment_grades', 'enrollment_groups.id', '=', 'enrollment_grades.enrollment_group_id')
             ->select(
+                'people.name',
+                'people.last_name_father as lastNameFather',
+                'people.last_name_mother as lastNameMother',
+                'people.document_number as documentNumber',
                 'enrollment_groups.id',
                 'enrollment_groups.student_id as studentId',
-                'enrollment_grades.final_grade as finalGrade',
-                'enrollment_grades.capacity_average as capacityAverage',
-                'enrollment_grades.attitude_grade as attitudeGrade',
+                'enrollment_grades.id as gradeId',
+                'enrollment_grades.grade as finalGrade',
+                'courses.units',
             )
+            ->join('groups', 'enrollment_groups.group_id', '=', 'groups.id')
+            ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
+            ->join('people', 'students.person_id', '=', 'people.id')
+            ->join('courses', 'groups.course_id', '=', 'courses.id')
+            ->leftJoin('enrollment_grades', 'enrollment_groups.id', '=', 'enrollment_grades.enrollment_group_id')
             ->where('enrollment_groups.group_id', $id)
             ->get()->map(function ($grade) {
                 $grade->finalGrade = $grade->finalGrade ? $grade->finalGrade : 0;
-                $grade->capacityAverage = $grade->capacityAverage ? $grade->capacityAverage : 0;
-                $grade->attitudeGrade = $grade->attitudeGrade ? $grade->attitudeGrade : 'A';
+
+                $existingGrades = DB::table('enrollment_unit_grades')
+                    ->select('id', 'order', 'grade')
+                    ->where('enrollment_grade_id', $grade->gradeId)
+                    ->orderBy('order')
+                    ->get()
+                    ->keyBy('order'); // Indexar por 'order' para acceso rápido
+
+                // Crear la lista completa asegurando todas las unidades
+                $gradeUnits = [];
+                for ($i = 1; $i <= $grade->units; $i++) {
+                    if (isset($existingGrades[$i])) {
+                        // Si existe, usar el valor real
+                        $gradeUnits[] = $existingGrades[$i];
+                    } else {
+                        // Si falta, agregar un objeto vacío
+                        $gradeUnits[] = (object)[
+                            'id' => null,   // No existe en la BD
+                            'order' => $i,  // Número de la unidad
+                            'grade' => null // Sin calificación
+                        ];
+                    }
+                }
+
+                $grade->gradeUnits = $gradeUnits;
                 return $grade;
             });
 

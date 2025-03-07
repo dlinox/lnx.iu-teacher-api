@@ -50,7 +50,7 @@ class GroupController extends Controller
             $items = Group::getGradeStudents($request->id);
             return ApiResponse::success($items);
         } catch (\Exception $e) {
-            return ApiResponse::error($e->getMessage());
+            return ApiResponse::error($e->getMessage(), 'No se pudo obtener las notas');
         }
     }
 
