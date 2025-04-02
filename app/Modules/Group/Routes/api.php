@@ -13,4 +13,10 @@ Route::prefix('api/groups')->middleware('auth:sanctum')->group(function () {
     Route::get('grade-students/{id}', [GroupController::class, 'getGradeStudents']);
     //saveGradeStudents
     Route::post('grade-students/save', [GroupController::class, 'saveGradeStudents']);
+
+    //getActiveGroupsForTeacher
+    Route::get('active-groups-for-teacher', [GroupController::class, 'getActiveGroupsForTeacher']);
+
+    //getGradeStudentsByUnit
+    Route::post('unit-grade-students/', [GroupController::class, 'getGradeStudentsByUnit']);
 });

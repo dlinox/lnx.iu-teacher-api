@@ -16,14 +16,14 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
-        'account_level',
+        'model_type',
         'email_verified_at',
         'is_enabled',
         'model_id',
     ];
 
     protected $hidden = [
-        'account_level',
+        'model_type',
         'model_id',
         'password',
     ];

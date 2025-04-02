@@ -34,7 +34,7 @@ class AuthController extends Controller
                 $query->where('username', $request->username)
                     ->orWhere('email', $request->username);
             })
-            ->where('users.account_level', 'teacher')
+            ->where('users.model_type', 'teacher')
             ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -65,7 +65,7 @@ class AuthController extends Controller
                 'email' => $data['email'],
                 'password' => $person->document_number,
                 'is_enabled' => true,
-                'account_level' => 'student',
+                'model_type' => 'student',
                 'model_id' => $student->id,
             ]);
 

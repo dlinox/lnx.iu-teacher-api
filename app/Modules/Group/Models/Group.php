@@ -3,6 +3,7 @@
 namespace App\Modules\Group\Models;
 
 use App\Modules\Period\Models\Period;
+use App\Modules\Schedule\Models\Schedule;
 use App\Traits\HasDataTable;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
@@ -35,15 +36,7 @@ class Group extends Model
             ->where('groups.teacher_id', $teacherId)
             ->where('groups.period_id', $periodId)
             ->get()->map(function ($group) {
-                $group->schedules = DB::table('schedules')
-                    ->select('schedules.day', 'schedules.start_hour', 'schedules.end_hour')
-                    ->where('group_id', $group->id)
-                    ->get()->map(function ($shedule) {
-                        $shedule->day = $shedule->day;
-                        $shedule->start_hour = Carbon::parse($shedule->start_hour)->format('h:i A');
-                        $shedule->end_hour = Carbon::parse($shedule->end_hour)->format('h:i A');
-                        return $shedule;
-                    });
+                $group->schedules  = Schedule::byGroup($group->id);
                 return $group;
             });
         return $groups;
@@ -56,6 +49,7 @@ class Group extends Model
             'groups.name as name',
             'courses.name as course',
             'modules.name as module',
+            'courses.units',
             'areas.name as area',
             'periods.year as period',
             'periods.month as month',
@@ -72,15 +66,7 @@ class Group extends Model
             ->where('groups.id', $id)
             ->first();
 
-        $group->schedules = DB::table('schedules')
-            ->select('schedules.day', 'schedules.start_hour', 'schedules.end_hour')
-            ->where('group_id', $group->id)
-            ->get()->map(function ($shedule) {
-                $shedule->day = $shedule->day;
-                $shedule->start_hour = Carbon::parse($shedule->start_hour)->format('h:i A');
-                $shedule->end_hour = Carbon::parse($shedule->end_hour)->format('h:i A');
-                return $shedule;
-            });
+        $group->schedules  = Schedule::byGroup($group->id);
 
         return $group;
     }
@@ -160,6 +146,51 @@ class Group extends Model
                 $grade->gradeUnits = $gradeUnits;
                 return $grade;
             });
+
+        return $grades;
+    }
+
+    public static function getGradeStudentsByUnit($id, $unitOrder)
+    {
+        $grades = DB::table('enrollment_groups')
+            ->select(
+                'people.name',
+                'people.last_name_father as lastNameFather',
+                'people.last_name_mother as lastNameMother',
+                'people.document_number as documentNumber',
+                'enrollment_groups.id',
+                'enrollment_groups.student_id as studentId',
+                'enrollment_grades.id as gradeId',
+                'enrollment_grades.grade as finalGrade',
+                'courses.units',
+            )
+            ->join('groups', 'enrollment_groups.group_id', '=', 'groups.id')
+            ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
+            ->join('people', 'students.person_id', '=', 'people.id')
+            ->join('courses', 'groups.course_id', '=', 'courses.id')
+            ->leftJoin('enrollment_grades', 'enrollment_groups.id', '=', 'enrollment_grades.enrollment_group_id')
+            ->where('enrollment_groups.group_id', $id)
+            ->get()->map(function ($grade) use ($unitOrder) {
+                $grade->finalGrade = $grade->finalGrade ? $grade->finalGrade : 0;
+
+                $existingGrade = DB::table('enrollment_unit_grades')
+                    ->select('id', 'order', 'grade')
+                    ->where('enrollment_grade_id', $grade->gradeId)
+                    ->where('order', $unitOrder)
+                    ->first();
+
+                // Crear la lista con solo la unidad especificada
+                $gradeUnit = $existingGrade ? $existingGrade : (object)[
+                    'id' => null,   // No existe en la BD
+                    'order' => $unitOrder,  // Número de la unidad
+                    'grade' => null // Sin calificación
+                ];
+
+                $grade->gradeUnit = $gradeUnit;
+                return $grade;
+            });
+
+
 
         return $grades;
     }

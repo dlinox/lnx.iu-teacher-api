@@ -61,4 +61,20 @@ class Period extends Model
 
         return $periods;
     }
+
+    public static function byTeacher($teacherId)
+    {
+        $periods = self::select(
+            'periods.id as value',
+            DB::raw('CONCAT(year, "-", view_month_constants.label) as title'),
+        )
+            ->join('view_month_constants', 'periods.month', '=', 'view_month_constants.value')
+            ->join('groups', 'periods.id', '=', 'groups.period_id')
+            ->where('groups.teacher_id', $teacherId)
+            ->orderBy('title', 'desc')
+            ->distinct()
+            ->get();
+
+        return $periods;
+    }
 }
