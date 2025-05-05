@@ -10,7 +10,12 @@ class GroupDataTableItemResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'isActive' => $this->is_active,
+            'name' => $this->name,
+            'course' => $this->course,
+            'period' => $this->period,
+            'periodId' => $this->period_id,
+            'modality' => $this->modality,
+            'curriculum' => $this->curriculum,
         ];
     }
 }

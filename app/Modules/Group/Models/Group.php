@@ -2,10 +2,8 @@
 
 namespace App\Modules\Group\Models;
 
-use App\Modules\Period\Models\Period;
 use App\Modules\Schedule\Models\Schedule;
 use App\Traits\HasDataTable;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -13,6 +11,13 @@ class Group extends Model
 {
     use HasDataTable;
 
+    static $searchColumns = [
+        'groups.name',
+        'courses.name',
+        'periods.year',
+        'months.name',
+        'curriculums.name',
+    ];
 
     public static function getGroupsForTeacher($teacherId, $periodId)
     {
@@ -51,18 +56,22 @@ class Group extends Model
             'modules.name as module',
             'courses.units',
             'areas.name as area',
+            'periods.id as periodId',
             'periods.year as period',
             'periods.month as month',
             'groups.modality as modality',
             'curriculums.id as curriculumId',
             'curriculums.name as curriculum',
+            'curriculums.grading_model as gradingModel',
             'courses.units',
+            'academic_records.id as hasAcademicRecord',
         )
             ->join('courses', 'courses.id', '=', 'groups.course_id')
             ->join('curriculums', 'courses.curriculum_id', '=', 'curriculums.id')
             ->join('modules', 'courses.module_id', '=', 'modules.id')
             ->join('areas', 'courses.area_id', '=', 'areas.id')
             ->join('periods', 'groups.period_id', '=', 'periods.id')
+            ->leftJoin('academic_records', 'groups.id', '=', 'academic_records.group_id')
             ->where('groups.id', $id)
             ->first();
 
@@ -77,22 +86,20 @@ class Group extends Model
             ->select(
                 'students.id',
                 'enrollment_groups.id as enrollmentGroupId',
-                'people.name',
-                'people.last_name_father as lastNameFather',
-                'people.last_name_mother as lastNameMother',
-                'people.document_number as documentNumber',
-                'people.email',
-                'people.phone',
+                'students.name',
+                'students.last_name_father as lastNameFather',
+                'students.last_name_mother as lastNameMother',
+                'students.document_number as documentNumber',
+                'students.phone',
                 'student_types.name as studentType',
 
             )
             ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
             ->join('student_types', 'students.student_type_id', '=', 'student_types.id')
-            ->join('people', 'students.person_id', '=', 'people.id')
             ->where('enrollment_groups.group_id', $id)
-            ->orderBy('people.name')
-            ->orderBy('people.last_name_father')
-            ->orderBy('people.last_name_mother')
+            ->orderBy('students.name')
+            ->orderBy('students.last_name_father')
+            ->orderBy('students.last_name_mother')
             ->get();
         return $students;
     }
@@ -101,24 +108,29 @@ class Group extends Model
     {
         $grades = DB::table('enrollment_groups')
             ->select(
-                'people.name',
-                'people.last_name_father as lastNameFather',
-                'people.last_name_mother as lastNameMother',
-                'people.document_number as documentNumber',
+                'students.code',
+                'students.name',
+                'students.last_name_father as lastNameFather',
+                'students.last_name_mother as lastNameMother',
+                'students.document_number as documentNumber',
                 'enrollment_groups.id',
                 'enrollment_groups.student_id as studentId',
                 'enrollment_grades.id as gradeId',
                 'enrollment_grades.grade as finalGrade',
+                'enrollment_grades.is_locked as isLocked',
                 'courses.units',
             )
             ->join('groups', 'enrollment_groups.group_id', '=', 'groups.id')
             ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
-            ->join('people', 'students.person_id', '=', 'people.id')
             ->join('courses', 'groups.course_id', '=', 'courses.id')
             ->leftJoin('enrollment_grades', 'enrollment_groups.id', '=', 'enrollment_grades.enrollment_group_id')
             ->where('enrollment_groups.group_id', $id)
+            ->orderBy('students.name')
+            ->orderBy('students.last_name_father')
+            ->orderBy('students.last_name_mother')
             ->get()->map(function ($grade) {
-                $grade->finalGrade = $grade->finalGrade ? $grade->finalGrade : 0;
+                $grade->finalGrade = $grade->finalGrade ? (float)$grade->finalGrade : 0;
+                $grade->isLocked = $grade->isLocked ? $grade->isLocked : 0;
 
                 $existingGrades = DB::table('enrollment_unit_grades')
                     ->select('id', 'order', 'grade')
@@ -131,10 +143,10 @@ class Group extends Model
                 $gradeUnits = [];
                 for ($i = 1; $i <= $grade->units; $i++) {
                     if (isset($existingGrades[$i])) {
-                        // Si existe, usar el valor real
+                        //grade a  float
+                        $existingGrades[$i]->grade = $existingGrades[$i]->grade ? (float)$existingGrades[$i]->grade : 0;
                         $gradeUnits[] = $existingGrades[$i];
                     } else {
-                        // Si falta, agregar un objeto vacío
                         $gradeUnits[] = (object)[
                             'id' => null,   // No existe en la BD
                             'order' => $i,  // Número de la unidad
@@ -142,7 +154,6 @@ class Group extends Model
                         ];
                     }
                 }
-
                 $grade->gradeUnits = $gradeUnits;
                 return $grade;
             });
@@ -150,23 +161,49 @@ class Group extends Model
         return $grades;
     }
 
+    public static function getAttendanceStudents($groupId, $date)
+    {
+        $students = DB::table('enrollment_groups')
+            ->select(
+                'enrollment_groups.id as enrollmentGroupId',
+                'students.id',
+                'students.name',
+                'students.last_name_father as lastNameFather',
+                'students.last_name_mother as lastNameMother',
+                'students.document_number as documentNumber',
+                'enrollment_group_attendances.status as status',
+            )
+            ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
+            ->join('student_types', 'students.student_type_id', '=', 'student_types.id')
+            ->leftJoin('enrollment_group_attendances', function ($join) use ($date) {
+                $join->on('enrollment_groups.id', '=', 'enrollment_group_attendances.enrollment_group_id')
+                    ->where('enrollment_group_attendances.date', $date);
+            })
+            ->where('enrollment_groups.group_id', $groupId)
+            ->orderBy('students.name')
+            ->orderBy('students.last_name_father')
+            ->orderBy('students.last_name_mother')
+            ->get();
+        return $students;
+    }
+
     public static function getGradeStudentsByUnit($id, $unitOrder)
     {
         $grades = DB::table('enrollment_groups')
             ->select(
-                'people.name',
-                'people.last_name_father as lastNameFather',
-                'people.last_name_mother as lastNameMother',
-                'people.document_number as documentNumber',
+                'students.name',
+                'students.last_name_father as lastNameFather',
+                'students.last_name_mother as lastNameMother',
+                'students.document_number as documentNumber',
                 'enrollment_groups.id',
                 'enrollment_groups.student_id as studentId',
                 'enrollment_grades.id as gradeId',
                 'enrollment_grades.grade as finalGrade',
+                'enrollment_grades.is_locked',
                 'courses.units',
             )
             ->join('groups', 'enrollment_groups.group_id', '=', 'groups.id')
             ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
-            ->join('people', 'students.person_id', '=', 'people.id')
             ->join('courses', 'groups.course_id', '=', 'courses.id')
             ->leftJoin('enrollment_grades', 'enrollment_groups.id', '=', 'enrollment_grades.enrollment_group_id')
             ->where('enrollment_groups.group_id', $id)
@@ -189,9 +226,6 @@ class Group extends Model
                 $grade->gradeUnit = $gradeUnit;
                 return $grade;
             });
-
-
-
         return $grades;
     }
 }

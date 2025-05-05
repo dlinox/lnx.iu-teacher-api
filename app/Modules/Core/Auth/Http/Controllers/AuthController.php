@@ -31,14 +31,18 @@ class AuthController extends Controller
             'users.*',
         )
             ->where(function ($query) use ($request) {
-                $query->where('username', $request->username)
-                    ->orWhere('email', $request->username);
+                $query->where('users.username', $request->username)
+                    ->orWhere('users.email', $request->username);
             })
             ->where('users.model_type', 'teacher')
             ->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return ApiResponse::error('', 'Credenciales incorrectas');
+        if (!$user) {
+            return ApiResponse::error(null, 'Usuario no encontrado');
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return ApiResponse::error($user, 'Credenciales incorrectas');
         }
 
         if ($user->is_enabled == 0) {

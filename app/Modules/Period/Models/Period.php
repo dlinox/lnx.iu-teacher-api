@@ -28,8 +28,8 @@ class Period extends Model
     {
         $period = self::select(
             'periods.id as id',
-            DB::raw('CONCAT(year, "-", view_month_constants.label) as name'),
-        )->join('view_month_constants', 'periods.month', '=', 'view_month_constants.value')
+            DB::raw('CONCAT(year, "-", UPPER(months.name)) as name'),
+        )->join('months', 'periods.month', '=', 'months.id')
             ->where('status', 'EN CURSO')
             ->first();
 
@@ -40,8 +40,8 @@ class Period extends Model
     {
         $period = self::select(
             'periods.id as id',
-            DB::raw('CONCAT(year, "-", view_month_constants.label) as name'),
-        )->join('view_month_constants', 'periods.month', '=', 'view_month_constants.value')
+            DB::raw('CONCAT(year, "-", UPPER(months.name)) as name'),
+        )->join('months', 'periods.month', '=', 'months.id')
             ->where('status', 'MATRICULA')
             ->first();
 
@@ -52,9 +52,9 @@ class Period extends Model
     {
         $periods = self::select(
             'periods.id as value',
-            DB::raw('CONCAT(year, "-", view_month_constants.label) as title'),
+            DB::raw('CONCAT(year, "-", UPPER(months.name)) as title'),
         )
-            ->join('view_month_constants', 'periods.month', '=', 'view_month_constants.value')
+            ->join('months', 'periods.month', '=', 'months.id')
             ->orderBy('year', 'desc')
             ->orderBy('month', 'desc')
             ->get();
@@ -66,9 +66,9 @@ class Period extends Model
     {
         $periods = self::select(
             'periods.id as value',
-            DB::raw('CONCAT(year, "-", view_month_constants.label) as title'),
+            DB::raw('CONCAT(year, "-", UPPER(months.name)) as title'),
         )
-            ->join('view_month_constants', 'periods.month', '=', 'view_month_constants.value')
+            ->join('months', 'periods.month', '=', 'months.id')
             ->join('groups', 'periods.id', '=', 'groups.period_id')
             ->where('groups.teacher_id', $teacherId)
             ->orderBy('title', 'desc')
