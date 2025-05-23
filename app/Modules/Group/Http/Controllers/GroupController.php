@@ -132,7 +132,7 @@ class GroupController extends Controller
                 $enrollmentGrade =  EnrollmentGrade::updateOrCreate(
                     ['enrollment_group_id' => $grade['enrollmentGroupId']],
                     [
-                        'grade' => $grade['finalGrade'],
+                        'grade' => round($grade['finalGrade']),
                     ]
                 );
                 foreach ($grade['gradeUnits'] as $gradeUnit) {
@@ -294,7 +294,7 @@ class GroupController extends Controller
                     'name' => $student->lastNameFather . ' ' . $student->lastNameMother . ', ' . $student->name,
                     'finalGrade' => $student->finalGrade,
                     'gradeUnits' => $student->gradeUnits,
-                    'finalGradeText' => $formatter->toWords((float)$student->finalGrade, 2)
+                    'finalGradeText' => $formatter->toWords((float)$student->finalGrade, 2),
                 ];
             });
 
@@ -375,7 +375,7 @@ class GroupController extends Controller
                 'format' => 'A4',
                 'margin_left' => 10,
                 'margin_right' => 10,
-                'margin_top' => 32,
+                'margin_top' => 40,
                 'margin_bottom' => 10,
                 'margin_header' => 5,
                 'margin_footer' => 5,

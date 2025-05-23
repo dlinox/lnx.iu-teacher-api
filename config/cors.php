@@ -6,7 +6,8 @@ return [
         //todo los orígenes permitidos de cualquier puerto 34.55.61.47:
         'http://34.55.61.47:96', // Permitir cualquier puerto en esta IP
         'http://localhost:2024',
-        'http://localhost:5175'
+        'http://localhost:5175',
+        'https://docentes.infouna.unap.edu.pe'
         // Permitir cualquier puerto en localhost
     ], // Solo estos orígenes pueden acceder a la API
     'allowed_origins_patterns' => [],

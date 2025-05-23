@@ -61,17 +61,32 @@
             <th style="border: none;"></th>
             <th style="border: none;"></th>
             <th style="border: none;"></th>
-            <th colspan="2">Promedio Parcial</th>
-            <th colspan="2">Promedio Final</th>
+            <th colspan="2">
+                <i>
+                    Promedio Parcial
+                </i>
+            </th>
+            <th colspan="2">
+                <i>
+                    Promedio Final
+                </i>
+            </th>
         </tr>
         <tr>
             <th>N°</th>
             <th>CÓDIGO</th>
             <th>APELLIDOS Y NOMBRES</th>
-            <th style="width: 50px; text-align: center;">Prom. Parc.</th>
-            <th style="width: 50px; text-align: center;">Act.</th>
+
+            @foreach ($students[0]->gradeUnits as $i => $unit)
+            <td style="width: 50px; text-align: center;">
+                <b>
+                    {{ $i == 0 ? 'Prom. Cap.' : 'Act.' }}
+                </b>
+            </td>
+            @endforeach
+
             <th style="width: 50px; text-align: center;">Número</th>
-            <th><strong>LETRAS</strong></th>
+            <th style="width: 80px; text-align: center;"><strong>LETRAS</strong></th>
         </tr>
     </thead>
     <tbody>
@@ -86,28 +101,22 @@
             <td>
                 {{ $student->name }}
             </td>
-
-            <td style="text-align: center;">
-                @php
-                $unit = collect($student->gradeUnits)->firstWhere('order', 1);
-                @endphp
-
-                {{ $unit->grade ?? '—' }}
+            @foreach ($student->gradeUnits as $unit)
+            <td style="text-align: center; font-size: 14px;">
+                <i>
+                    {{ $unit->grade !== null ? $unit->grade : '—' }}
+                </i>
             </td>
-            <td style="text-align: center;">
-                @php
-                $unit = collect($student->gradeUnits)->firstWhere('order', 2);
-                @endphp
-
-                {{ $unit->grade !== null
-                    ? ($unit->grade == 2 ? 'A' : ($unit->grade == 1 ? 'B' : 'C')) 
-                    : '—' }}
+            @endforeach
+            <td style="text-align: center; font-size: 14px;">
+                <i>
+                    {{ $student->finalGrade }}
+                </i>
             </td>
-            <td style="text-align: center;">
-                {{ $student->finalGrade }}
-            </td>
-            <td>
-                {{ $student->finalGradeText }}
+            <td style="text-align: center; font-size: 14px;">
+                <i>
+                    {{ $student->finalGradeText }}
+                </i>
             </td>
         </tr>
         @endforeach
@@ -123,7 +132,8 @@
     <tbody>
         <tr>
             <td>
-                <p> PF= 0,9(PC)+ Actitudes PF=Promedio final </p>
+                <p> PF= 0,9(PC)+ Actitudes </p>
+                <p>PF=Promedio final </p>
                 <p> PC=Promedio de las Capacidades </p>
                 <p> Actitudes: A=2,B=1,C=0 </p>
             </td>

@@ -90,6 +90,7 @@ class Group extends Model
                 'students.last_name_father as lastNameFather',
                 'students.last_name_mother as lastNameMother',
                 'students.document_number as documentNumber',
+                'students.code',
                 'students.phone',
                 'student_types.name as studentType',
 
@@ -97,9 +98,9 @@ class Group extends Model
             ->join('students', 'enrollment_groups.student_id', '=', 'students.id')
             ->join('student_types', 'students.student_type_id', '=', 'student_types.id')
             ->where('enrollment_groups.group_id', $id)
-            ->orderBy('students.name')
             ->orderBy('students.last_name_father')
             ->orderBy('students.last_name_mother')
+            ->orderBy('students.name')
             ->get();
         return $students;
     }
@@ -125,9 +126,9 @@ class Group extends Model
             ->join('courses', 'groups.course_id', '=', 'courses.id')
             ->leftJoin('enrollment_grades', 'enrollment_groups.id', '=', 'enrollment_grades.enrollment_group_id')
             ->where('enrollment_groups.group_id', $id)
-            ->orderBy('students.name')
             ->orderBy('students.last_name_father')
             ->orderBy('students.last_name_mother')
+            ->orderBy('students.name')
             ->get()->map(function ($grade) {
                 $grade->finalGrade = $grade->finalGrade ? (float)$grade->finalGrade : 0;
                 $grade->isLocked = $grade->isLocked ? $grade->isLocked : 0;
@@ -180,9 +181,9 @@ class Group extends Model
                     ->where('enrollment_group_attendances.date', $date);
             })
             ->where('enrollment_groups.group_id', $groupId)
-            ->orderBy('students.name')
             ->orderBy('students.last_name_father')
             ->orderBy('students.last_name_mother')
+            ->orderBy('students.name')
             ->get();
         return $students;
     }
